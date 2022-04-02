@@ -1,56 +1,79 @@
 from machine import Pin, Timer, PWM
 import random
+import time
 
-variant=int(random.random()*100)
+class Alarm:
+    def start(self):
 
-ledtimer = Timer()
-noisetimer = Timer()
+        self.variant = int(random.random() * 100)
 
-led1 = PWM(Pin(10))
-led1.freq(1000+variant)
-led2 = PWM(Pin(11))
-led2.freq(1000+variant)
+        self.ledtimer = Timer()
+        self.noisetimer = Timer()
+        Pin(10, Pin.OUT)
+        Pin(11, Pin.OUT)
+        Pin(13, Pin.OUT)
 
-pwm = PWM(Pin(13))
-pwm.freq(440)
+        self.led1 = PWM(Pin(10))
+        self.led1.freq(1000 + self.variant)
+        self.led2 = PWM(Pin(11))
+        self.led2.freq(1000 + self.variant)
 
-duty = 0
-direction = 1
+        self.pwm = PWM(Pin(13))
+        self.pwm.freq(440)
 
-leddirection = True
-ledvalue = 0
+        self.duty = 0
+        self.direction = 1
 
-def tickled(timer):
-    global led1
-    global led2
-    global leddirection
-    global ledvalue
-    if leddirection:
-        ledvalue += 4
-    else:
-        ledvalue -= 4
-    if ledvalue > 250:
-        leddirection = False
-        ledvalue = 250
-    if ledvalue < 8:
-        ledvalue = 8
-        leddirection = True
+        self.leddirection = True
+        self.ledvalue = 0
+        self.ledtimer.init(period=3, mode=Timer.PERIODIC, callback=self.tickled)
+        self.noisetimer.init(period=2, mode=Timer.PERIODIC, callback=self.ticknoise)
 
-    led1.duty_u16(ledvalue*ledvalue)
-    led2.duty_u16(65535 - (ledvalue*ledvalue))
+    def stop(self):
+        self.ledtimer.deinit()
+        self.noisetimer.deinit()
+        time.sleep(0.1)
+        self.led1.deinit()
+        self.led2.deinit()
+        self.pwm.deinit()
+        Pin(10, Pin.OUT).off()
+        Pin(11, Pin.OUT).off()
+        Pin(13, Pin.OUT).off()
 
-def ticknoise(timer):
-    global duty
-    global direction
-    duty += direction
-    if duty > 200:
-        duty = 200
-        direction = -1
-    elif duty < 0:
-        duty = 50
-        direction = 1
-    pwm.duty_u16(duty * duty)
-    pwm.freq(980+duty*3)
+    def tickled(self, timer):
+        if self.leddirection:
+            self.ledvalue += 4
+        else:
+            self.ledvalue -= 4
+        if self.ledvalue > 250:
+            self.leddirection = False
+            self.ledvalue = 250
+        if self.ledvalue < 8:
+            self.ledvalue = 8
+            self.leddirection = True
 
-ledtimer.init(period=3, mode=Timer.PERIODIC, callback=tickled)
-noisetimer.init(period=2, mode=Timer.PERIODIC, callback=ticknoise)
+        self.led1.duty_u16(self.ledvalue*self.ledvalue)
+        self.led2.duty_u16(65535 - (self.ledvalue*self.ledvalue))
+
+    def ticknoise(self, timer):
+        self.duty += self.direction
+        if self.duty > 200:
+            self.duty = 200
+            self.direction = -1
+        elif self.duty < 0:
+            self.duty = 50
+            self.direction = 1
+        self.pwm.duty_u16(self.duty * self.duty)
+        self.pwm.freq(980+self.duty*3)
+
+Pin(10, Pin.OUT).off()
+Pin(11, Pin.OUT).off()
+Pin(13, Pin.OUT).off()
+#time.sleep(1)
+
+alarm = Alarm()
+while True:
+    alarm.start()
+    time.sleep(5)
+    alarm.stop()
+    time.sleep(5)
