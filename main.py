@@ -11,7 +11,7 @@ class Alarm:
         self.noisetimer = Timer()
         Pin(10, Pin.OUT)
         Pin(11, Pin.OUT)
-        Pin(13, Pin.OUT)
+        Pin(13, mode=Pin.OUT)
 
         self.led1 = PWM(Pin(10))
         self.led1.freq(1000 + self.variant)
@@ -19,7 +19,7 @@ class Alarm:
         self.led2.freq(1000 + self.variant)
 
         self.pwm = PWM(Pin(13))
-        self.pwm.freq(440)
+        self.pwm.freq(440+self.variant*4)
 
         self.duty = 0
         self.direction = 1
@@ -32,6 +32,7 @@ class Alarm:
     def stop(self):
         self.ledtimer.deinit()
         self.noisetimer.deinit()
+        self.pwm.duty_u16(0)
         time.sleep(0.1)
         self.led1.deinit()
         self.led2.deinit()
@@ -56,20 +57,20 @@ class Alarm:
         self.led2.duty_u16(65535 - (self.ledvalue*self.ledvalue))
 
     def ticknoise(self, timer):
-        self.duty += self.direction
+        self.duty += self.direction * int(random.random() * 16)
         if self.duty > 200:
             self.duty = 200
             self.direction = -1
         elif self.duty < 0:
             self.duty = 50
             self.direction = 1
+            self.variant = int(random.random() * 100)
         self.pwm.duty_u16(self.duty * self.duty)
-        self.pwm.freq(980+self.duty*3)
+        self.pwm.freq(980+self.duty*3+(400 - self.variant * 4))
 
 Pin(10, Pin.OUT).off()
 Pin(11, Pin.OUT).off()
 Pin(13, Pin.OUT).off()
-#time.sleep(1)
 
 alarm = Alarm()
 while True:
